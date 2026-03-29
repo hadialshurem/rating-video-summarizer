@@ -119,9 +119,9 @@ def summarize_text(text):
         return response.text
         
     # Check for OpenAI (or compatible endpoints like LM Studio)
-    if os.environ.get("LLM_API_KEY"):
+    if os.environ.get("LLM_API_KEY") or os.environ.get("LLM_BASE_URL"):
         print("  -> Summarizing with OpenAI/Compatible API...")
-        api_key = os.environ.get("LLM_API_KEY")
+        api_key = os.environ.get("LLM_API_KEY", "lm-studio")  # OpenAI client requires a non-empty api_key
         base_url = os.environ.get("LLM_BASE_URL") # Optional: e.g. for LM Studio http://localhost:1234/v1
         model_name = os.environ.get("LLM_MODEL", "gpt-4o-mini")
         
@@ -131,15 +131,19 @@ def summarize_text(text):
             
         client = OpenAI(**client_kwargs)
         
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": "أنت مساعد ذكي متخصص في تلخيص مقاطع الفيديو وتقديم نقاط رئيسية واضحة."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
-        )
-        return response.choices[0].message.content
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": "أنت مساعد ذكي متخصص في تلخيص مقاطع الفيديو وتقديم نقاط رئيسية واضحة."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"  -> Error summarizing with API: {e}")
+            return f"<p>{text[:500]}...</p>"
 
     print("  -> No LLM configured. Returning original text snippet.")
     return f"<p>{text[:500]}...</p>"
